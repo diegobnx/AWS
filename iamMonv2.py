@@ -15,12 +15,14 @@ final_report_console = ''
 final_report_all_key = ''
 number = 1
 
+
 def get_max_password_age(iam_client):
     try:
         response = iam_client.get_account_password_policy()
         return response['PasswordPolicy']['MaxPasswordAge']
     except ClientError as e:
         print("Unexpected error in get_max_password_age: %s" + e.message)
+
 
 def days_till_expire(last_changed, max_age):
     if type(last_changed) is str:
@@ -33,6 +35,7 @@ def days_till_expire(last_changed, max_age):
         datetime.date.today()
     return (expires.days)
 
+
 for user in resource.users.all():
     keys_response = client.list_access_keys(UserName=user.user_name)
     last_access = None
@@ -43,15 +46,23 @@ for user in resource.users.all():
     currentdate = date.today()
     active_days = currentdate - accesskeydate
 
+    for key in keys_response['AccessKeyMetadata']:
+        if active_days.days <= 10:
+            client.update_access_key(
+                AccessKeyId=key['AccessKeyId'], Status='Inactive', UserName=user.user_name)
+        if password_expires <= 86:
+            login_profile.delete()
+
     if active_days.days >= 0:
         final_report_all_key += str(number) + " - Username: " + \
             [user.user_name][0] + " - AccessKey Age: " + \
-            str(active_days.days) + " days \n"
+            str(active_days.days) + " dias \n"
 
     if password_expires >= 0:
         final_report_console += str(number) + " - Username: " + [
             user.user_name][0] + " - Console passwords expira em: " + str(password_expires) + " dias \n"
 
     number += 1
+
 print(final_report_console)
 print(final_report_all_key)
