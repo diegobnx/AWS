@@ -6,8 +6,10 @@ import dateutil.parser
 from datetime import date
 from botocore.exceptions import ClientError
 
-resource = boto3.resource('iam')
-client = boto3.client('iam')
+profile = input('Qual o profile: ')
+session = boto3.Session(profile_name=profile)
+resource = session.resource('iam')
+client = session.client('iam')
 
 today = datetime.datetime.now()
 final_report_key = ''
@@ -21,7 +23,7 @@ def get_max_password_age(iam_client):
         response = iam_client.get_account_password_policy()
         return response['PasswordPolicy']['MaxPasswordAge']
     except ClientError as e:
-        print("Unexpected error in get_max_password_age: %s" + e.message)
+        print("Erro: %s" + e.message)
 
 
 def days_till_expire(last_changed, max_age):
@@ -92,11 +94,10 @@ for user in resource.users.all():
                 number += 1
 
     if last_access is not None:
-        #delta = (today - last_access.replace(tzinfo=None)).days
         if active_days.days >= 0:
             final_report_key += str(number) + ". Status: " + "[" + keyStatus + "]" + " - Username: " + \
                 [user.user_name][0] + " - Idade da AccessKey que possui acesso: " + \
-                str(active_days.days) + " days"
+                str(active_days.days) + " days \n"
             
 
     number += 1
